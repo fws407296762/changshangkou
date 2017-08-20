@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title><%=title%></title>
+</head>
+<body>
+<a href="https://openapi.baidu.com/oauth/2.0/authorize?client_id=0upuII64N8q7tpTKrmYBaGFr&response_type=code&redirect_uri=oob&scope=basic+netdisk">获取授权码</a>
+<input type="text" name="" placeholder="请输入授权码" id="code">
+<input type="button" value="进行授权" id="getCode">
+<input type="button" value="获取个人信息" id="getUser">
+<input type="button" value="获取百度网盘空间" id="getQuota">
+<input type="button" value="获取百度网盘空间2" id="getQuota2">
+<input type="button" value="获取文件元信息" id="getFile">
+<input type="button" value="创建目录" id="mkdirFile">
+<input type="button" value="创建目录2" id="mkdirFile2">
+<script src="https://cdn.bootcss.com/jquery/3.2.1/jquery.min.js"></script>
+<script>
+    $(function(){
+        var access_token = "";
+//        $("#getCode").on("click",function(){
+//            var val = $("#code").val();
+//            $.ajax({
+//                url:"https://openapi.baidu.com/oauth/2.0/token",
+//                data:{
+//                    "grant_type":"authorization_code",
+//                    code:val,
+//                    client_id:"0upuII64N8q7tpTKrmYBaGFr",
+//                    client_secret:"Nia5GyvhsoS6eMZhgd6FIVPI2wyKFx6v",
+//                    redirect_uri:"oob"
+//                },
+//                type:"POST"
+//            }).done(function(res){
+//                console.log(res);
+//                access_token = res.access_token;
+//            }).fail(function(res,b,c){
+//                console.log(res,b,c);
+//            })
+//        });
+
+        $("#getCode").on("click",function(){
+            var val = $("#code").val();
+            $.ajax({
+                url:"/api/baidu/authorization",
+                data:{
+                    code:val
+                }
+            }).done(function(res){
+                console.log(res);
+                access_token = res.access_token;
+            })
+        });
+
+        $("#getQuota").on("click",function(){
+            console.log(access_token)
+            $.ajax({
+                url:"https://pcs.baidu.com/rest/2.0/pcs/quota",
+                data:{
+                    method:"info",
+                    access_token:access_token
+                }
+            }).done(function(res){
+                console.log(res)
+            })
+        })
+        $("#getUser").on("click",function(){
+            $.ajax({
+                url:"/api/baidu/getLoggedInUser",
+                type:"get",
+                cache:false,
+                data:{
+                    accesstoken:access_token
+                }
+            }).done(function(res){
+                console.log(res)
+            })
+        });
+        $("#getQuota2").on("click",function(){
+            $.ajax({
+                url:"/api/baidu/getQuota",
+                data:{
+                    accesstoken:access_token
+                }
+            }).done(function(res){
+                console.log(res)
+            })
+        });
+        $("#getFile").on("click",function(){
+            $.ajax({
+                url:"/api/baidu/file/meta",
+                data:{
+                    accesstoken:access_token
+                }
+            }).done(function(res){
+                console.log(res)
+            })
+        });
+
+        $("#mkdirFile").on("click",function(){
+            $.ajax({
+                url:"/api/baidu/file/mkdir",
+                data:{
+                    accesstoken:access_token
+                }
+            }).done(function(res){
+                console.log(res)
+            })
+        });
+
+        $("#mkdirFile2").on("click",function(){
+            $.ajax({
+                url:"https://pcs.baidu.com/rest/2.0/pcs/file?method=mkdir&access_token=21.f75d74746b7adc4d1d656fea4c6eba5f.2592000.1505824203.3063862573-286652&path=%2Fapps%2Fyunform%2Fmusic",
+                type:"POST"
+            }).done(function(res){
+                console.log(res)
+            })
+        });
+    })
+</script>
+</body>
+</html>
