@@ -13,6 +13,9 @@
 <input type="button" value="获取文件元信息" id="getFile">
 <input type="button" value="创建目录" id="mkdirFile">
 <input type="button" value="创建目录2" id="mkdirFile2">
+<input type="button" value="上传文件" id="uploadFile">
+<input type="button" value="搜索文件" id="searchFile">
+<input type="button" value="下载文件" id="downloadFile">
 <script src="https://cdn.bootcss.com/jquery/3.2.1/jquery.min.js"></script>
 <script>
     $(function(){
@@ -110,6 +113,39 @@
             $.ajax({
                 url:"https://pcs.baidu.com/rest/2.0/pcs/file?method=mkdir&access_token=21.f75d74746b7adc4d1d656fea4c6eba5f.2592000.1505824203.3063862573-286652&path=%2Fapps%2Fyunform%2Fmusic",
                 type:"POST"
+            }).done(function(res){
+                console.log(res)
+            })
+        });
+
+        $("#uploadFile").on("click",function(){
+            $.ajax({
+                url:"/api/baidu/file/upload",
+                type:'POST',
+                data:{
+                    accesstoken:access_token
+                }
+            }).done(function(res){
+                console.log(res)
+            })
+        });
+        $("#searchFile").on("click",function(){
+            $.ajax({
+                url:"/api/baidu/file/search",
+                data:{
+                    accesstoken:access_token
+                }
+            }).done(function(res){
+                console.log(res)
+            })
+        });
+
+        $("#downloadFile").on("click",function(){
+            $.ajax({
+                url:"/api/baidu/file/download",
+                data:{
+                    accesstoken:access_token
+                }
             }).done(function(res){
                 console.log(res)
             })
