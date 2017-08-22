@@ -46,7 +46,7 @@ const querystring = require("querystring");
 //             path:"/video",
 //             method:"get",
 //             headers:{
-//                 "User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.115 Safari/537.36",
+    //                 "User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.115 Safari/537.36",
 //                 "Cookie":setCookis
 //             }
 //         };
@@ -114,43 +114,3 @@ const querystring = require("querystring");
 
 // request.write(bodyData);
 // request.end();
-
-
-//上传单个文件
-console.log("开始请求")
-const path = require("path");
-const fs = require("fs");
-let fileDate = fs.readFileSync(path.join(__dirname,"ASP.ico"),"utf8");
-let uploadData = querystring.stringify({
-    "file":fileDate
-});
-
-let uploadOpts = {
-    protocol:"https:",
-    host:"c.pcs.baidu.com",
-    path:"/rest/2.0/pcs/file?method=upload&access_token=21.dfa9ff7b0c149469180889a04181336b.2592000.1503717323.1963687721-286652&path=ASP.ico&ondup=newcopy",
-    method:"POST",
-    headers:{
-        "User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.115 Safari/537.36",
-        "Content-Type":"application/x-www-form-urlencoded",
-        'Content-Length': Buffer.byteLength(uploadData)
-    }
-};
-
-let uploadFileRequest = https.request(uploadOpts,function(res){
-    console.log("status:",res.statusCode);
-    console.log("header：",res.headers);
-    res.setEncoding('utf8');
-    res.on("data",function(chunk){
-        console.log(`BODY:${chunk}`);
-    })
-    res.on("end",function(){
-        console.log("请求结束")
-    });
-});
-uploadFileRequest.on('error', (e) => {
-    console.error(`problem with request: ${e.message}`);
-});
-uploadFileRequest.write(uploadData);
-uploadFileRequest.end();
-

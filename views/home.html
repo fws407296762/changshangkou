@@ -16,6 +16,9 @@
 <input type="button" value="上传文件" id="uploadFile">
 <input type="button" value="搜索文件" id="searchFile">
 <input type="button" value="下载文件" id="downloadFile">
+<input type="button" value="登陆小蚁" id="loginXY">
+<input type="button" value="进入Video" id="enterVideo">
+<input type="button" value="创建人物" id="createDownload">
 <script src="https://cdn.bootcss.com/jquery/3.2.1/jquery.min.js"></script>
 <script>
     $(function(){
@@ -145,6 +148,36 @@
                 url:"/api/baidu/file/download",
                 data:{
                     accesstoken:access_token
+                }
+            }).done(function(res){
+                console.log(res)
+            })
+        });
+
+        $("#loginXY").on("click",function(){
+            $.ajax({
+                url:"/api/xiaoyi/login",
+                type:"post"
+            }).done(function(res){
+                console.log(res)
+            })
+        });
+
+        $("#enterVideo").on("click",function(){
+            $.ajax({
+                url:"/api/xiaoyi/video"
+            }).done(function(res){
+                console.log(res)
+            })
+        });
+
+        $("#createDownload").on("click",function(){
+            $.ajax({
+                url:"/api/xiaoyi/download/create",
+                type:"POST",
+                data:{
+                    startTime:1503347534000,
+                    stopTime:1503347618000
                 }
             }).done(function(res){
                 console.log(res)
