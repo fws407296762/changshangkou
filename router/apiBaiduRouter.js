@@ -13,6 +13,50 @@ const querystring = require("querystring");
 const fs = require("fs");
 const path = require("path");
 
+
+//上传文件
+function postFile(fileKeyValue, req) {
+    var boundaryKey = Math.random().toString(16);
+    var enddata = '\r\n----' + boundaryKey + '--';
+
+    var files = new Array();
+    for (var i = 0; i < fileKeyValue.length; i++) {
+        var content = '\r\n----' + boundaryKey + '\r\n' + 'Content-Type: application/octet-stream\r\n' + 'Content-Disposition: form-data; name=\'' + fileKeyValue[i].urlKey + '\'; filename=\'' + path.basename(fileKeyValue[i].urlValue) + '\'\r\n' + 'Content-Transfer-Encoding: binary\r\n\r\n';
+        var contentBinary = new Buffer(content, 'utf-8');//当编码为ascii时，中文会乱码。
+        files.push({contentBinary: contentBinary, filePath: fileKeyValue[i].urlValue});
+    }
+    var contentLength = 0;
+    for (var i = 0; i<files.length; i++) {
+        var stat = fs.statSync(files[i].filePath);
+        contentLength += files[i].contentBinary.length;
+        contentLength += stat.size;
+    }
+    req.setHeader('Content-Type', 'multipart/form-data; boundary=--' + boundaryKey);
+    req.setHeader('Content-Length', contentLength + Buffer.byteLength(enddata));
+
+    // 将参数发出
+    var fileindex = 0;
+    var doOneFile = function(){
+        req.write(files[fileindex].contentBinary);
+        var fileStream = fs.createReadStream(files[fileindex].filePath, {bufferSize : 4 * 1024});
+        fileStream.pipe(req, {end: false});
+        fileStream.on('end', function() {
+            fileindex++;
+            if(fileindex == files.length){
+                req.end(enddata);
+            } else {
+                doOneFile();
+            }
+        });
+    };
+    if(fileindex == files.length){
+        req.end(enddata);
+    } else {
+        doOneFile();
+    }
+}
+
+
 //获取百度 access_token
 router.get("/authorization",function(req,res){
     let query = req.query;
@@ -213,47 +257,6 @@ router.post("/file/upload",function(req,res){
     var files = [
         {urlKey:"file",urlValue:"./upload/2.txt"}
     ];
-
-    function postFile(fileKeyValue, req) {
-        var boundaryKey = Math.random().toString(16);
-        var enddata = '\r\n----' + boundaryKey + '--';
-
-        var files = new Array();
-        for (var i = 0; i < fileKeyValue.length; i++) {
-            var content = '\r\n----' + boundaryKey + '\r\n' + 'Content-Type: application/octet-stream\r\n' + 'Content-Disposition: form-data; name=\'' + fileKeyValue[i].urlKey + '\'; filename=\'' + path.basename(fileKeyValue[i].urlValue) + '\'\r\n' + 'Content-Transfer-Encoding: binary\r\n\r\n';
-            var contentBinary = new Buffer(content, 'utf-8');//当编码为ascii时，中文会乱码。
-            files.push({contentBinary: contentBinary, filePath: fileKeyValue[i].urlValue});
-        }
-        var contentLength = 0;
-        for (var i = 0; i<files.length; i++) {
-            var stat = fs.statSync(files[i].filePath);
-            contentLength += files[i].contentBinary.length;
-            contentLength += stat.size;
-        }
-        req.setHeader('Content-Type', 'multipart/form-data; boundary=--' + boundaryKey);
-        req.setHeader('Content-Length', contentLength + Buffer.byteLength(enddata));
-
-        // 将参数发出
-        var fileindex = 0;
-        var doOneFile = function(){
-            req.write(files[fileindex].contentBinary);
-            var fileStream = fs.createReadStream(files[fileindex].filePath, {bufferSize : 4 * 1024});
-            fileStream.pipe(req, {end: false});
-            fileStream.on('end', function() {
-                fileindex++;
-                if(fileindex == files.length){
-                    req.end(enddata);
-                } else {
-                    doOneFile();
-                }
-            });
-        };
-        if(fileindex == files.length){
-            req.end(enddata);
-        } else {
-            doOneFile();
-        }
-    }
     let options = {
         host:"pcs.baidu.com",
         protocol:"https:",
@@ -262,6 +265,40 @@ router.post("/file/upload",function(req,res){
     };
     let request = https.request(options,function(response){
         console.log("执行进来...")
+        let responseData = "";
+        response.on("data",function(chunk){
+            responseData += chunk;
+        });
+        response.on("end",function(){
+            console.log(responseData);
+            responseData = JSON.parse(responseData);
+            res.send(responseData);
+        });
+    });
+    postFile(files,request);
+});
+
+
+// 文件分片上传
+router.post("/file/upload/tmpfile",function(req,res){
+    let query = req.query,
+        headers = req.headers,
+        body = req.body;
+    let bodyData = querystring.stringify({
+        file:body.file
+    });
+    var fileContent = fs.readFileSync('./upload/1.txt',"utf8");
+    var files = [
+        {urlKey:"file",urlValue:"./upload/2.txt"}
+    ];
+    let options = {
+        host:"pcs.baidu.com",
+        protocol:"https:",
+        path:"/rest/2.0/pcs/file?method=upload&access_token="+body.accesstoken+"&type=tmpfile",
+        method:"POST"
+    };
+    let request = https.request(options,function(response){
+        console.log("分片上传执行进来...")
         let responseData = "";
         response.on("data",function(chunk){
             responseData += chunk;

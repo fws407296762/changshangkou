@@ -145,6 +145,7 @@ router.get("/download/file",function(req,res){
     http.get("http://xiaoyi-stream.oss-cn-shanghai.aliyuncs.com/output/316aa931-2c9b-4d95-b576-28b5f5adb3f3.mp4?Expires=1503482400&OSSAccessKeyId=Pa0tZniM9vyAqqMn&Signature=n0tyH%2BFndfgt0gt4h9BQ6VYL9VY%3D",function(res){
         let fileBuff = [];
         console.log("开始下载文件")
+        let upladStatus = false;
         res.on("data",function(chunk){
             console.log("正在下载...")
             fileBuff.push(chunk)
@@ -175,5 +176,12 @@ function formttime(time){
         seconds = date.getSeconds();
     return year + "-" + month + "-" + day + " " + hours + ":" + minutes + ":" + seconds;
 }
+
+function simulateUploadForm(file){
+    let boundaryKey = Math.random().toString(16);
+    let enddata = '\r\n----' + boundaryKey + '--';
+    console.log(enddata)
+}
+simulateUploadForm();
 
 module.exports = router;
