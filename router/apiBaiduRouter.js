@@ -12,7 +12,8 @@ const https = require("https");
 const querystring = require("querystring");
 const fs = require("fs");
 const path = require("path");
-
+const stream = require("stream");
+const util = require("util");
 
 function postFile(fileKeyValue, req) {
     var boundaryKey = Math.random().toString(16);
@@ -266,7 +267,7 @@ router.post("/file/upload",function(req,res){
     let options = {
         host:"pcs.baidu.com",
         protocol:"https:",
-        path:"/rest/2.0/pcs/file?method=upload&access_token="+body.accesstoken+"&path=%2Fapps%2FFileGee%E6%96%87%E4%BB%B6%E5%90%8C%E6%AD%A5%E5%A4%87%E4%BB%BD%E7%B3%BB%E7%BB%9F%2F%E5%A5%BD%E5%90%A7.txt&ondup=newcopy",
+        path:"/rest/2.0/pcs/file?method=upload&access_token="+body.accesstoken+"&path=%2Fapps%2FFileGee%E6%96%87%E4%BB%B6%E5%90%8C%E6%AD%A5%E5%A4%87%E4%BB%BD%E7%B3%BB%E7%BB%9F%2F%E5%A5%BD%E5%90%A7.mp3&ondup=newcopy",
         method:"POST"
     };
 
@@ -283,7 +284,7 @@ router.post("/file/upload",function(req,res){
 
         });
     });
-    postFile(files,request);
+    postFile(null,request);
 });
 
 //为当前用户创建一个目录
