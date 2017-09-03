@@ -12,9 +12,9 @@ const https = require("https");
 const querystring = require("querystring");
 const fs = require("fs");
 const path = require("path");
+const stream = require("stream");
 
-
-//上传文件
+//上传文件头信息函数
 function postFile(fileKeyValue, req) {
     var boundaryKey = Math.random().toString(16);
     var enddata = '\r\n----' + boundaryKey + '--';
@@ -31,17 +31,18 @@ function postFile(fileKeyValue, req) {
         contentLength += files[i].contentBinary.length;
         contentLength += stat.size;
     }
-    req.setHeader('Content-Type', 'multipart/form-data; boundary=--' + boundaryKey);
-    req.setHeader('Content-Length', contentLength + Buffer.byteLength(enddata));
+
 
     // 将参数发出
     var fileindex = 0;
     var doOneFile = function(){
         req.write(files[fileindex].contentBinary);
         var fileStream = fs.createReadStream(files[fileindex].filePath, {bufferSize : 4 * 1024});
-        fileStream.pipe(req, {end: false});
+        fileStream.pipe(req, {end: false})
+        console.log("fileStream:",req);
         fileStream.on('end', function() {
             fileindex++;
+
             if(fileindex == files.length){
                 req.end(enddata);
             } else {
@@ -264,7 +265,7 @@ router.post("/file/upload",function(req,res){
         method:"POST"
     };
     let request = https.request(options,function(response){
-        console.log("执行进来...")
+        console.log("\r\n执行进来...")
         let responseData = "";
         response.on("data",function(chunk){
             responseData += chunk;
@@ -284,13 +285,7 @@ router.post("/file/upload/tmpfile",function(req,res){
     let query = req.query,
         headers = req.headers,
         body = req.body;
-    let bodyData = querystring.stringify({
-        file:body.file
-    });
-    var fileContent = fs.readFileSync('./upload/1.txt',"utf8");
-    var files = [
-        {urlKey:"file",urlValue:"./upload/2.txt"}
-    ];
+    let fileChunk = Buffer.from(body.file);
     let options = {
         host:"pcs.baidu.com",
         protocol:"https:",
@@ -298,19 +293,36 @@ router.post("/file/upload/tmpfile",function(req,res){
         method:"POST"
     };
     let request = https.request(options,function(response){
-        console.log("分片上传执行进来...")
+        console.log("开始上传：",fileChunk)
         let responseData = "";
         response.on("data",function(chunk){
+            console.log("正在上传...")
             responseData += chunk;
         });
         response.on("end",function(){
-            console.log(responseData);
+            console.log("上传成功",responseData);
             responseData = JSON.parse(responseData);
             res.send(responseData);
         });
     });
-    postFile(files,request);
+    simulateUploadForm(fileChunk,request);
 });
+
+function simulateUploadForm(data,req){
+    let boundary = Math.random().toString(16);
+    let body = "\r\n----"+boundary+"\r\n";
+    body += "Content-Type: application/octet-stream\r\n";
+    body += 'Content-Disposition: form-data; name="file"; filename="1.mp4"\r\n';
+    body += 'Content-Transfer-Encoding: binary\r\n\r\n';
+    let endBody = '\r\n----'+boundary+'--';
+
+    req.setHeader('Content-Type', 'multipart/form-data; boundary=--' + boundary);
+    req.setHeader('Content-Length', Buffer.byteLength(body) + data.length + Buffer.byteLength(endBody));
+    req.write(body);
+    req.write(data);
+    req.write(endBody);
+    req.end();
+}
 
 //为当前用户创建一个目录
 router.get("/file/search",function(req,res){

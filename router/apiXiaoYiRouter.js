@@ -11,7 +11,8 @@ const http = require("http");
 const https = require("https");
 const url = require("url");
 const fs = require("fs");
-
+const EventEmitter = require('events');
+let XYEvent = new EventEmitter();
 let loginedLoaction = "",loginedCookie= "",loginedInitData = {};
 
 //登陆到小蚁平台
@@ -139,31 +140,84 @@ router.post("/download/create",function(req,res){
     request.end();
 });
 
+let isStartUpload = false;
+let fileChunkAry = [];
+XYEvent.on("getFileChunk",function(chunk,accesstoken){
+    fileChunkAry.push(chunk);
+    if(!isStartUpload && fileChunkAry.length>0){
+        uploadFileChunk(fileChunkAry,accesstoken)
+    }
+});
+
+function uploadFileChunk(fileChunkAry,accesstoken){
+    if(!fileChunkAry.length){
+        isStartUpload = false;
+        return false;
+    }
+    isStartUpload = true;
+    let index = 0;
+    let fileChunkAryLen = fileChunkAry.length;
+    (function cycleUploadChunk(chunk){
+        console.log(index,fileChunkAryLen)
+        if(index === fileChunkAryLen){
+            isStartUpload = false;
+            return false;
+        }
+        upTmpFile({
+            chunk:chunk,
+            accesstoken:accesstoken
+        }).then(function(){
+            fileChunkAry.splice(0,1);
+            index++;
+            cycleUploadChunk(fileChunkAry[0])
+        })
+    })(fileChunkAry[0])
+}
+
 //下载小蚁任务
 router.get("/download/file",function(req,res){
     let query = req.query;
-    http.get("http://xiaoyi-stream.oss-cn-shanghai.aliyuncs.com/output/316aa931-2c9b-4d95-b576-28b5f5adb3f3.mp4?Expires=1503482400&OSSAccessKeyId=Pa0tZniM9vyAqqMn&Signature=n0tyH%2BFndfgt0gt4h9BQ6VYL9VY%3D",function(res){
+    let accesstoken = query.accesstoken;
+    http.get("http://xiaoyi-stream.oss-cn-shanghai.aliyuncs.com/output/26a89df1-95c2-4af9-ba4f-38afee281a0c.mp4?Expires=1504533600&OSSAccessKeyId=Pa0tZniM9vyAqqMn&Signature=VXrZ10wQAVhLBTF/x6Hx8KQMZGc%3D",function(res){
         let fileBuff = [];
-        console.log("开始下载文件")
+        console.log("开始下载文件");
         let upladStatus = false;
         res.on("data",function(chunk){
-            console.log("正在下载...")
-            fileBuff.push(chunk)
+            XYEvent.emit("getFileChunk",chunk,accesstoken)
         });
         res.on("end",function(){
-            let newBuf = Buffer.concat(fileBuff);
-            fs.writeFile("demo.mp4",newBuf,(err)=>{
-                if(err){
-                    console.log(err);
-                    return false;
-                }
-                console.log("创建文件成功")
-            })
-        })
+            console.log("下载完成")
+        });
     })
 });
 
-
+function upTmpFile(options){
+    let chunk = options.chunk,
+        accesstoken = options.accesstoken;
+    return new Promise(function(resolve,reject){
+        let json = JSON.stringify(chunk);
+        let bodyPost = JSON.stringify({
+            file:JSON.parse(json),
+            accesstoken:accesstoken
+        });
+        let baiduUploadRequest = http.request({
+            host:"www.changtangkou.com",
+            protocol:"http:",
+            path:"/api/baidu/file/upload/tmpfile",
+            method:"POST",
+            headers:{
+                "X-Requested-With":"XMLHttpRequest",
+                "Content-Type":"application/json",
+                "Content-Length":bodyPost.length
+            }
+        });
+        baiduUploadRequest.write(bodyPost);
+        baiduUploadRequest.end(function(){
+            console.log("上传完:",chunk)
+            resolve();
+        });
+    })
+}
 
 
 function formttime(time){
@@ -177,11 +231,6 @@ function formttime(time){
     return year + "-" + month + "-" + day + " " + hours + ":" + minutes + ":" + seconds;
 }
 
-function simulateUploadForm(file){
-    let boundaryKey = Math.random().toString(16);
-    let enddata = '\r\n----' + boundaryKey + '--';
-    console.log(enddata)
-}
-simulateUploadForm();
+
 
 module.exports = router;
