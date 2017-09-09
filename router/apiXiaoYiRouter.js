@@ -116,12 +116,17 @@ router.post("/download/create",function(req,res){
             'Content-Type': 'application/x-www-form-urlencoded'
         }
     };
+    // let bodyData = querystring.stringify({
+    //     uid:loginedInitData["window.initData.currentUid"],
+    //     startTime:startTime || loginedInitData["window.initData.startTime"],
+    //     stopTime:stopTime || loginedInitData["window.initData.startTime"]
+    // });
+
     let bodyData = querystring.stringify({
         uid:loginedInitData["window.initData.currentUid"],
-        startTime:startTime || loginedInitData["window.initData.startTime"],
-        stopTime:stopTime || loginedInitData["window.initData.startTime"]
+        startTime:1504874763000,
+        stopTime:1504874803000
     });
-
     let request = https.request(options,function(response){
         let responseData = "";
         let responseHeaders = response.headers;
@@ -142,53 +147,62 @@ router.post("/download/create",function(req,res){
 
 let isStartUpload = false;
 let fileChunkAry = [];
+let uploadSize = 0;
 XYEvent.on("getFileChunk",function(chunk,accesstoken){
     fileChunkAry.push(chunk);
-    if(!isStartUpload && fileChunkAry.length>0){
-        uploadFileChunk(fileChunkAry,accesstoken)
+    if(!uploadSize){
+        uploadFileChunk(fileChunkAry,accesstoken);
     }
+    uploadSize++;
 });
 
-function uploadFileChunk(fileChunkAry,accesstoken){
-    if(!fileChunkAry.length){
-        isStartUpload = false;
+function uploadFileChunk(chunks,accesstoken) {
+    let chunksLen = chunks.length;
+    if(!chunksLen){
+        console.log("所有的 chunk 上传完成");
+        uploadSize = 0;
         return false;
     }
-    isStartUpload = true;
-    let index = 0;
-    let fileChunkAryLen = fileChunkAry.length;
-    (function cycleUploadChunk(chunk){
-        console.log(index,fileChunkAryLen)
-        if(index === fileChunkAryLen){
-            isStartUpload = false;
-            return false;
-        }
+    if(!isStartUpload){
+        let firstChunk = chunks.splice(0,1)[0];
+        isStartUpload = true;
+        console.log("\r\n开始上传：",firstChunk);
         upTmpFile({
-            chunk:chunk,
+            chunk:firstChunk,
             accesstoken:accesstoken
-        }).then(function(){
-            fileChunkAry.splice(0,1);
-            index++;
-            cycleUploadChunk(fileChunkAry[0])
-        })
-    })(fileChunkAry[0])
+        }).then(function(res){
+            console.log("返回的信息：",res)
+            console.log("上传结束：",firstChunk,"\r\n")
+            isStartUpload = false;
+            uploadFileChunk(fileChunkAry,accesstoken);
+        });
+    }
 }
 
 //下载小蚁任务
 router.get("/download/file",function(req,res){
     let query = req.query;
     let accesstoken = query.accesstoken;
-    http.get("http://xiaoyi-stream.oss-cn-shanghai.aliyuncs.com/output/26a89df1-95c2-4af9-ba4f-38afee281a0c.mp4?Expires=1504533600&OSSAccessKeyId=Pa0tZniM9vyAqqMn&Signature=VXrZ10wQAVhLBTF/x6Hx8KQMZGc%3D",function(res){
-        let fileBuff = [];
-        console.log("开始下载文件");
+    let request = http.get("http://xiaoyi-stream.oss-cn-shanghai.aliyuncs.com/output/166e96c6-1c35-4c92-a3c2-bcd7da0ab98a.mp4?Expires=1505055600&OSSAccessKeyId=Pa0tZniM9vyAqqMn&Signature=0eDAWOmBaA%2BGxzJTWwGES/H2zys%3D",function(res){
+        let fileBuffAry = [];
         let upladStatus = false;
+        let fileContentLen = res.headers["content-length"];
+        let minUploadChunk = Math.ceil(fileContentLen / 10);
+
         res.on("data",function(chunk){
-            XYEvent.emit("getFileChunk",chunk,accesstoken)
+            let chunkLen = chunk.length;
+            fileBuffAry.push(chunk);
+            let fileBuff = Buffer.concat(fileBuffAry);
+            if(fileBuff.length >= minUploadChunk){
+                console.log("=====开始上传文件 chunk ======",fileBuff,fileBuff.length)
+                XYEvent.emit("getFileChunk",fileBuff,accesstoken);
+                fileBuffAry = [];
+            }
         });
         res.on("end",function(){
-            console.log("下载完成")
+            console.log("下载完成");
         });
-    })
+    });
 });
 
 function upTmpFile(options){
@@ -200,7 +214,7 @@ function upTmpFile(options){
             file:JSON.parse(json),
             accesstoken:accesstoken
         });
-        let baiduUploadRequest = http.request({
+        let options = {
             host:"www.changtangkou.com",
             protocol:"http:",
             path:"/api/baidu/file/upload/tmpfile",
@@ -210,12 +224,18 @@ function upTmpFile(options){
                 "Content-Type":"application/json",
                 "Content-Length":bodyPost.length
             }
+        };
+        let baiduUploadRequest = http.request(options,function(response){
+            let reeponseData = "";
+            response.on("data",function(chunk){
+                reeponseData += chunk
+            });
+            response.on("end",function(){
+                resolve(reeponseData);
+            })
         });
         baiduUploadRequest.write(bodyPost);
-        baiduUploadRequest.end(function(){
-            console.log("上传完:",chunk)
-            resolve();
-        });
+        baiduUploadRequest.end();
     })
 }
 

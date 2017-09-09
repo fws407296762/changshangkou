@@ -292,19 +292,20 @@ router.post("/file/upload/tmpfile",function(req,res){
         path:"/rest/2.0/pcs/file?method=upload&access_token="+body.accesstoken+"&type=tmpfile",
         method:"POST"
     };
+    console.log("正在上传：",fileChunk)
     let request = https.request(options,function(response){
-        console.log("开始上传：",fileChunk)
         let responseData = "";
         response.on("data",function(chunk){
-            console.log("正在上传...")
             responseData += chunk;
         });
         response.on("end",function(){
-            console.log("上传成功",responseData);
             responseData = JSON.parse(responseData);
             res.send(responseData);
         });
     });
+    request.on("error",function(err){
+        console.log("发生了错误",err)
+    })
     simulateUploadForm(fileChunk,request);
 });
 
@@ -312,7 +313,7 @@ function simulateUploadForm(data,req){
     let boundary = Math.random().toString(16);
     let body = "\r\n----"+boundary+"\r\n";
     body += "Content-Type: application/octet-stream\r\n";
-    body += 'Content-Disposition: form-data; name="file"; filename="1.mp4"\r\n';
+    body += 'Content-Disposition: form-data; name="file"; filename="1.jpg"\r\n';
     body += 'Content-Transfer-Encoding: binary\r\n\r\n';
     let endBody = '\r\n----'+boundary+'--';
 

@@ -6,8 +6,8 @@ const express = require("express");
 const path = require("path");
 const app = express();
 var bodyParser = require('body-parser');
-app.use(bodyParser.json()); // for parsing application/json
-app.use(bodyParser.urlencoded({ extended: true })); // for parsing application/x-www-form-urlencoded
+app.use(bodyParser.json({limit:'50mb'})); // for parsing application/json
+app.use(bodyParser.urlencoded({limit:'50mb',extended: true })); // for parsing application/x-www-form-urlencoded
 let pageRouter = require("./router/pageRouter.js");
 let apiBaiduRouter = require("./router/apiBaiduRouter.js");
 let apiXiaoYiRouter = require("./router/apiXiaoYiRouter.js");
@@ -19,6 +19,8 @@ app.set("view engine","html");
 app.use("/",pageRouter);
 app.use("/api/baidu",apiBaiduRouter);
 app.use("/api/xiaoyi",apiXiaoYiRouter);
-app.listen(80,"www.changtangkou.com",function(){
+let server = app.listen(80,"www.changtangkou.com",function(){
     console.log("http://www.changtangkou.com服务已经开启")
 });
+
+server.setTimeout(0)
