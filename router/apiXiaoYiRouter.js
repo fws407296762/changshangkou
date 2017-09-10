@@ -147,20 +147,30 @@ router.post("/download/create",function(req,res){
 
 let isStartUpload = false;
 let fileChunkAry = [];
-let uploadSize = 0;
+let uploadTime = 0;
+const blockSize = 10;
+let blockList = [];
+/*
+ * 自定义事件将文件流存放在数组中，如果第一次执行就开始执行上传chunk函数 uploadFileChunk ，其他时候不执行 uploadFileChunk
+ * 为什么只执行一次呢？因为 uploadFileChunk 是一个递归函数
+ */
+
 XYEvent.on("getFileChunk",function(chunk,accesstoken){
     fileChunkAry.push(chunk);
-    if(!uploadSize){
+    if(!uploadTime){
         uploadFileChunk(fileChunkAry,accesstoken);
     }
-    uploadSize++;
+    uploadTime++;
 });
 
 function uploadFileChunk(chunks,accesstoken) {
     let chunksLen = chunks.length;
     if(!chunksLen){
         console.log("所有的 chunk 上传完成");
-        uploadSize = 0;
+        uploadTime = 0;
+        if(blockList.length === blockSize){
+            uploadCreatesuperfile(blockList,accesstoken)
+        }
         return false;
     }
     if(!isStartUpload){
@@ -171,8 +181,11 @@ function uploadFileChunk(chunks,accesstoken) {
             chunk:firstChunk,
             accesstoken:accesstoken
         }).then(function(res){
-            console.log("返回的信息：",res)
-            console.log("上传结束：",firstChunk,"\r\n")
+            res = JSON.parse(res);
+            console.log("返回的信息：",(typeof res))
+            console.log("上传结束：",firstChunk,"\r\n");
+            let md5 = res.md5;
+            blockList.push(md5);
             isStartUpload = false;
             uploadFileChunk(fileChunkAry,accesstoken);
         });
@@ -183,20 +196,37 @@ function uploadFileChunk(chunks,accesstoken) {
 router.get("/download/file",function(req,res){
     let query = req.query;
     let accesstoken = query.accesstoken;
-    let request = http.get("http://xiaoyi-stream.oss-cn-shanghai.aliyuncs.com/output/166e96c6-1c35-4c92-a3c2-bcd7da0ab98a.mp4?Expires=1505055600&OSSAccessKeyId=Pa0tZniM9vyAqqMn&Signature=0eDAWOmBaA%2BGxzJTWwGES/H2zys%3D",function(res){
+    let request = http.get("http://xiaoyi-stream.oss-cn-shanghai.aliyuncs.com/output/2b4b0121-c886-40ac-821d-1cf241afcb65.mp4?Expires=1505116800&OSSAccessKeyId=Pa0tZniM9vyAqqMn&Signature=vG8sTsFxkTLzRbcMbKcMKhnBJPE%3D",function(res){
         let fileBuffAry = [];
         let upladStatus = false;
         let fileContentLen = res.headers["content-length"];
-        let minUploadChunk = Math.ceil(fileContentLen / 10);
-
+        let minUploadChunk = Math.ceil(fileContentLen / blockSize);
+        let dataSize = 0;
+        let yetUploadChunkLen = 0;
+        console.log(res.headers);
         res.on("data",function(chunk){
             let chunkLen = chunk.length;
             fileBuffAry.push(chunk);
             let fileBuff = Buffer.concat(fileBuffAry);
+            let surplusLen = blockSize - dataSize;
+            // console.log(dataSize)
+            if(surplusLen === 1){
+                let lastLen = fileContentLen - yetUploadChunkLen;
+                if(fileBuff.length === lastLen){
+                    console.log("正在执行最后一个",fileBuff,fileBuff.length);
+                    // console.log("=====开始上传文件 chunk ======",fileBuff,fileBuff.length)
+                    XYEvent.emit("getFileChunk",fileBuff,accesstoken);
+                    fileBuffAry = [];
+                    return false;
+                }
+            }
             if(fileBuff.length >= minUploadChunk){
+                console.log(fileBuffAry.length,fileBuff.length)
                 console.log("=====开始上传文件 chunk ======",fileBuff,fileBuff.length)
                 XYEvent.emit("getFileChunk",fileBuff,accesstoken);
                 fileBuffAry = [];
+                dataSize++;
+                yetUploadChunkLen = yetUploadChunkLen + fileBuff.length;
             }
         });
         res.on("end",function(){
@@ -204,6 +234,8 @@ router.get("/download/file",function(req,res){
         });
     });
 });
+
+
 
 function upTmpFile(options){
     let chunk = options.chunk,
@@ -238,7 +270,43 @@ function upTmpFile(options){
         baiduUploadRequest.end();
     })
 }
+function uploadCreatesuperfile(blockList,accesstoken){
+    let postData = {
+        accesstoken:accesstoken,
+        "param":{
+            "block_list":blockList
+        }
+    };
+    let path = querystring.stringify({
+        path:querystring.escape("/apps/FileGee文件同步备份系统/小蚁摄像机.mp4")
+    });
+    let bodyPost = JSON.stringify(postData);
+    let options = {
+        protocol:"http:",
+        host:"www.changtangkou.com",
+        path:"/api/baidu/file/upload/createsuperfile?"+path,
+        method:"POST",
+        headers:{
+            "X-Requested-With":"XMLHttpRequest",
+            "Content-Type":"application/json",
+            "Content-Length":bodyPost.length
+        }
+    };
 
+    let request = http.request(options,function(response){
+        let responseData = "";
+        response.on("data",function(chunk){
+            responseData += chunk;
+        });
+        response.on("end",function(){
+            console.log(responseData);
+        });
+    });
+
+
+    request.write(bodyPost);
+    request.end();
+}
 
 function formttime(time){
     let date = new Date(time);

@@ -261,7 +261,7 @@ router.post("/file/upload",function(req,res){
     let options = {
         host:"pcs.baidu.com",
         protocol:"https:",
-        path:"/rest/2.0/pcs/file?method=upload&access_token="+body.accesstoken+"&path=%2Fapps%2FFileGee%E6%96%87%E4%BB%B6%E5%90%8C%E6%AD%A5%E5%A4%87%E4%BB%BD%E7%B3%BB%E7%BB%9F%2F%E5%A5%BD%E5%90%A7.txt&ondup=newcopy",
+        path:"/rest/2.0/pcs/file?method=upload&access_token="+body.accesstoken+"&path="+query.path+"&ondup=newcopy",
         method:"POST"
     };
     let request = https.request(options,function(response){
@@ -324,6 +324,41 @@ function simulateUploadForm(data,req){
     req.write(endBody);
     req.end();
 }
+
+//合并分片文件
+router.post("/file/upload/createsuperfile",function (req,res){
+    let query = req.query,
+        headers = req.headers,
+        body = req.body;
+    let options = {
+        host:"c.pcs.baidu.com",
+        protocol:"https:",
+        path:"/rest/2.0/pcs/file?method=createsuperfile&access_token="+body.accesstoken+"&path="+query.path+"&ondup=newcopy",
+        method:"POST",
+        headers:{
+            "X-Requested-With":"XMLHttpRequest",
+            "Content-Type":"application/x-www-form-urlencoded"
+        }
+    };
+    console.log("开始合并分片文件：",options)
+    let request = https.request(options,function(response){
+        let responseData = "";
+        console.log("合并结束...")
+        response.on("data",function(chunk){
+            responseData += chunk;
+        });
+        response.on("end",function(){
+            responseData = JSON.parse(responseData);
+            console.log(responseData)
+            res.send(responseData);
+        });
+    });
+    request.on("error",function(err){
+        console.log(err);
+    })
+    // console.log()
+    request.end(querystring.stringify({"param":JSON.stringify(body.param)}));
+})
 
 //为当前用户创建一个目录
 router.get("/file/search",function(req,res){
