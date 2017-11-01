@@ -19,8 +19,6 @@ app.set("view engine","html");
 app.use("/",pageRouter);
 app.use("/api/baidu",apiBaiduRouter);
 app.use("/api/xiaoyi",apiXiaoYiRouter);
-let server = app.listen(80,"www.changtangkou.com",function(){
+let server = app.listen(8090,"www.changtangkou.com",function(){
     console.log("http://www.changtangkou.com服务已经开启")
 });
-
-server.setTimeout(0)
