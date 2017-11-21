@@ -16,6 +16,14 @@ app.engine("html",require("ejs").renderFile);
 app.set("views",path.join(__dirname,"views"));
 app.set("view engine","html");
 
+app.all("*",function(req,res,next){
+    res.header("Access-Control-Allow-Origin","http://www.shadouyouquan.com:8081");
+    res.header("Access-Control-Allow-Headers","X-Requested-With");
+    res.header("Access-Control-Allow-Methods","PUT,POST,GET,DETELE,OPTIONS");
+    res.header("X-Powered-By",' 3.2.1')
+    res.header("Content-Type", "application/x-www-form-urlencoded");
+    next();
+})
 app.use("/",pageRouter);
 app.use("/api/baidu",apiBaiduRouter);
 app.use("/api/xiaoyi",apiXiaoYiRouter);

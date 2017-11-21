@@ -18,10 +18,11 @@ let loginedLoaction = "",loginedCookie= "",loginedInitData = {};
 //登陆到小蚁平台
 router.post("/login",function(req,res){
     let query = req.query,
-        headers = req.headers;
+        headers = req.headers,
+        body = req.body;
     let bodyData = querystring.stringify({
-        "account":"17720440292",
-        "password":"Lyq2512125"
+        "account":body.account,
+        "password":body.password
     });
     let options = {
         protocol:"https:",
