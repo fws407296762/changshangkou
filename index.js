@@ -16,7 +16,7 @@ app.engine("html",require("ejs").renderFile);
 app.set("views",path.join(__dirname,"views"));
 app.set("view engine","html");
 
-app.all("*",function(req,res,next){
+app.all("/api/*",function(req,res,next){
     res.header("Access-Control-Allow-Origin","http://www.shadouyouquan.com:8081");
     res.header("Access-Control-Allow-Headers","X-Requested-With");
     res.header("Access-Control-Allow-Methods","PUT,POST,GET,DETELE,OPTIONS");

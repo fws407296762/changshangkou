@@ -14,15 +14,17 @@ const fs = require("fs");
 const EventEmitter = require('events');
 let XYEvent = new EventEmitter();
 let loginedLoaction = "",loginedCookie= "",loginedInitData = {};
+const XYDOMAIN = 'https://yun.xiaoyi.com';
 
 //登陆到小蚁平台
 router.post("/login",function(req,res){
     let query = req.query,
         headers = req.headers,
         body = req.body;
+    let userAgent = headers["user-agent"];
     let bodyData = querystring.stringify({
         "account":body.account,
-        "password":body.password
+        "password":body.passport
     });
     let options = {
         protocol:"https:",
@@ -30,10 +32,9 @@ router.post("/login",function(req,res){
         path:"/login",
         method:"POST",
         headers:{
-            "User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.115 Safari/537.36",
-            "Upgrade-Insecure-Requests":1,
-            "Origin":"https://yun.xiaoyi.com",
+            "User-Agent":userAgent,
             "Content-Type":"application/x-www-form-urlencoded",
+            Origin:XYDOMAIN,
             "Content-Length":Buffer.byteLength(bodyData)
         }
     };
@@ -44,14 +45,24 @@ router.post("/login",function(req,res){
             responseData += chunk;
         });
         response.on("end",function(){
-            console.log("小蚁登陆成功");
+            let resultData = null;
             loginedLoaction = responseHeaders.location;
-            let setCookie = responseHeaders["set-cookie"];
-            loginedCookie = setCookie.join(",").replace(/(HttpOnly)\;?\,?|(Secure)\;?\,?|(Path=\/)\;?\,?|\s*/g,"");
-            res.send({
-                code:0,
-                msg:"登陆成功"
-            })
+            if(loginedLoaction === XYDOMAIN + '/video'){
+                console.log("小蚁登陆成功");
+                let setCookie = responseHeaders["set-cookie"];
+                loginedCookie = setCookie.join(",").replace(/(HttpOnly)\;?\,?|(Secure)\;?\,?|(Path=\/)\;?\,?|\s*/g,"");
+                resultData = {
+                    code:0,
+                    msg:"登录成功"
+                };
+            }else{
+                resultData = {
+                    code:1,
+                    msg:"用户名或密码错误"
+                };
+            }
+            console.log(resultData)
+            res.send(resultData);
         })
     });
     request.write(bodyData);
