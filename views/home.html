@@ -51,10 +51,12 @@
                 url:"/api/baidu/authorization",
                 data:{
                     code:val
-                }
+                },
+              dataType:"JSON"
             }).done(function(res){
-                console.log(res);
+                console.log(typeof res);
                 access_token = res.access_token;
+                console.log(access_token)
             })
         });
 
